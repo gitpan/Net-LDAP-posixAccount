@@ -10,6 +10,9 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,
+		'Net::LDAP::Entry' => 0,
+        'Sys::User::UIDhelper' => 0,
+		'Sys::Group::GIDhelper' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Net-LDAP-posixAccount-*' },

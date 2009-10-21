@@ -3,18 +3,20 @@ package Net::LDAP::posixAccount;
 use warnings;
 use strict;
 use Net::LDAP::Entry;
+use Sys::User::UIDhelper;
+use Sys::Group::GIDhelper;
 
 =head1 NAME
 
-Net::LDAP::posixAccount - The great new Net::LDAP::posixAccount!
+Net::LDAP::posixAccount - Creates new Net::LDAP::Entry objects for a posixAccount entry.
 
 =head1 VERSION
 
-Version 0.0.1
+Version 0.0.2
 
 =cut
 
-our $VERSION = '0.0.1';
+our $VERSION = '0.0.2';
 
 
 =head1 SYNOPSIS
@@ -92,11 +94,13 @@ if it is not defined.
 
 =head3 uid
 
-This is the UID number of a user.
+This is the UID number of a user. If set to 'AUTO', 'Sys::User::UIDhelper'
+will be used.
 
 =head3 gid
 
-This is GID number of a user.
+This is GID number of a user. If set to 'AUTO', 'Sys::Group::GIDhelper'
+will be used.
 
 =head3 gecos
 
@@ -120,6 +124,26 @@ This is the attribute that will be used for when creating the entry. 'uid',
 =head3 description
 
 This is the LDAP description field. If it is not defined, it is set to gecos.
+
+=head3 minUID
+
+This is the min UID that will be used if 'uid' is set to 'AUTO'. The default is
+'1001'.
+
+=head3 maxUID
+
+This is the max UID that will be used if 'uid' is set to 'AUTO'. The default is
+'64000'.
+
+=head3 minGID
+
+This is the min GID that will be used if 'gid' is set to 'AUTO'. The default is
+'1001'.
+
+=head3 maxGID
+
+This is the max GID that will be used if 'gid' is set to 'AUTO'. The default is
+'64000'.
 
 =cut
 
@@ -151,12 +175,54 @@ sub create {
 		return undef;
 	}
 
+	#handles choosing the UID if it is set to AUTO
+	if ($args{uid} eq 'AUTO') {
+		#sets the minUID if it is not defined
+		if (!defined($args{minUID} eq '1001')) {
+			$args{uid}='1001';
+		}
+
+		#sets the maxUID if it is not defined
+		if (!defined($args{minUID})) {
+			$args{uid}='64000';
+		}
+
+		#creates it
+		my $uidhelper=Sys::User::UIDhelper->new({
+												 min=>$args{minUID},
+												 max=>$args{maxUID}
+												 });
+		#gets the first free one
+		$args{uid}=$uidhelper->firstfree();
+	}
+
 	#error if gid is not defined
 	if (!defined($args{gid})) {
 		warn('Net-LDAP-posixAccount create:3: gid not defined');
 		$self->{error}=3;
 		$self->{errorString}='gid not defined';
 		return undef;
+	}
+
+	#handles choosing the GID if it is set to AUTO
+	if ($args{gid} eq 'AUTO') {
+		#sets the minUID if it is not defined
+		if (!defined($args{minGID} eq '1001')) {
+			$args{uid}='1001';
+		}
+
+		#sets the maxUID if it is not defined
+		if (!defined($args{minGID})) {
+			$args{uid}='64000';
+		}
+
+		#creates it
+		my $gidhelper=Sys::Group::GIDhelper->new({
+												 min=>$args{minGID},
+												 max=>$args{maxGID}
+												 });
+		#gets the first free one
+		$args{gid}=$gidhelper->firstfree();
 	}
 
 	#set gecos to name if it is not defined
@@ -209,7 +275,6 @@ sub create {
 		$self->{errorString}='primary is a invalid value';
 		return undef;
 	}
-	
 
 	#forms the DN if it is using the UID
 	if ($args{primary} eq 'uid') {
